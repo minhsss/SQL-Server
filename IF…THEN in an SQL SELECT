@@ -1,0 +1,23 @@
+
+
+SELECT CAST(
+             CASE
+                  WHEN Obsolete = 'N' or InStock = 'Y'
+                     THEN 1
+                  ELSE 0
+             END AS bit) as Saleable, *
+FROM Product
+
+
+You only need to do the CAST if you want the result as a Boolean value. If you are happy with an int, this works:
+
+SELECT CASE
+            WHEN Obsolete = 'N' or InStock = 'Y'
+               THEN 1
+               ELSE 0
+       END as Saleable, *
+FROM Product
+
+SQL Server Denali (SQL Server 2012) adds the IIF statement which is also available in access (pointed out by Martin Smith):
+
+SELECT IIF(Obsolete = 'N' or InStock = 'Y', 1, 0) as Saleable, * FROM Product
