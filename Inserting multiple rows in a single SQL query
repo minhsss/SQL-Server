@@ -1,0 +1,9 @@
+https://stackoverflow.com/questions/452859/inserting-multiple-rows-in-a-single-sql-query
+
+INSERT INTO MyTable
+  ( Column1, Column2, Column3 )
+VALUES
+  ('John', 123, 'Lloyds Office'), 
+  ('Jane', 124, 'Lloyds Office'), 
+  ('Billy', 125, 'London Office'),
+  ('Miranda', 126, 'Bristol Office');
