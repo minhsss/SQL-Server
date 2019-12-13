@@ -1,0 +1,20 @@
+https://stackoverflow.com/questions/49925/what-is-the-difference-between-union-and-union-all
+
+UNION removes duplicate records (where all columns in the results are the same), UNION ALL does not.
+
+SELECT 'foo' AS bar UNION SELECT 'foo' AS bar
+
++-----+
+| bar |
++-----+
+| foo |
++-----+
+
+SELECT 'foo' AS bar UNION ALL SELECT 'foo' AS bar
+
++-----+
+| bar |
++-----+
+| foo |
+| foo |
++-----+
