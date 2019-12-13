@@ -1,0 +1,11 @@
+INSERT INTO table1 ( column1 )
+SELECT  col1
+FROM    table2  
+
+INSERT INTO table1 ( column1, column2, someInt, someVarChar )
+SELECT  table2.column1, table2.column2, 8, 'some string etc.'
+FROM    table2
+WHERE   table2.ID = 7;
+
+INSERT INTO column_1 ( val_1, val_from_other_table ) 
+VALUES('val_1', (SELECT  val_2 FROM table_2 WHERE val_2 = something))
