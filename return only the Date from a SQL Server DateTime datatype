@@ -1,0 +1,2 @@
+https://stackoverflow.com/questions/113045/how-to-return-only-the-date-from-a-sql-server-datetime-datatype
+SELECT CONVERT(date, GETDATE())
