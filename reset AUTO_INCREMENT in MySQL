@@ -1,0 +1,16 @@
+https://stackoverflow.com/questions/8923114/how-to-reset-auto-increment-in-mysql
+
+How can I reset the AUTO_INCREMENT of a field? I want it to start counting from 1 again
+
+You can reset the counter with:
+
+ALTER TABLE tablename AUTO_INCREMENT = 1
+For InnoDB you cannot set the auto_increment value lower or equal to the highest current index. (quote from ViralPatel):
+
+Note that you cannot reset the counter to a value less than or equal to any that have already been used. 
+For MyISAM, if the value is less than or equal to the maximum value currently in the AUTO_INCREMENT column, 
+the value is reset to the current maximum plus one.
+For InnoDB, if the value is less than the current maximum value in the column, 
+no error occurs and the current sequence value is not changed.
+
+See How to Reset an MySQL AutoIncrement using a MAX value from another table? on how to dynamically get an acceptable value.
