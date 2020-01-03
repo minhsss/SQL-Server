@@ -1,0 +1,49 @@
+https://stackoverflow.com/questions/276927/can-i-concatenate-multiple-mysql-rows-into-one-field
+
+
+Using MySQL, I can do something like:
+
+SELECT hobbies FROM peoples_hobbies WHERE person_id = 5;
+My Output:
+
+shopping
+fishing
+coding
+but instead I just want 1 row, 1 col:
+
+Expected Output:
+
+shopping, fishing, coding
+The reason is that I'm selecting multiple values from multiple tables, and after all the joins I've got a lot more rows than I'd like.
+
+I've looked for a function on MySQL Doc and it doesn't look like the CONCAT or CONCAT_WS functions accept result sets,
+so does anyone here know how to do this?
+
+
+
+You can use GROUP_CONCAT:
+
+SELECT person_id, GROUP_CONCAT(hobbies SEPARATOR ', ')
+FROM peoples_hobbies
+GROUP BY person_id;
+As Ludwig stated in his comment, you can add the DISTINCT operator to avoid duplicates:
+
+SELECT person_id, GROUP_CONCAT(DISTINCT hobbies SEPARATOR ', ')
+FROM peoples_hobbies 
+GROUP BY person_id;
+As Jan stated in their comment, you can also sort the values before imploding it using ORDER BY:
+
+SELECT person_id, GROUP_CONCAT(hobbies ORDER BY hobbies ASC SEPARATOR ', ')
+FROM peoples_hobbies
+GROUP BY person_id;
+As Dag stated in his comment, there is a 1024 byte limit on the result. To solve this, run this query before your query:
+
+SET group_concat_max_len = 2048;
+Of course, you can change 2048 according to your needs. To calculate and assign the value:
+
+SET group_concat_max_len = CAST(
+    (SELECT SUM(LENGTH(hobbies)) + COUNT(*) * LENGTH(', ')
+    FROM peoples_hobbies 
+    GROUP BY person_id)
+    AS UNSIGNED
+);
