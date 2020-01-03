@@ -1,0 +1,48 @@
+I want to delete using INNER JOIN in SQL Server 2008.
+
+But I get this error:
+
+Msg 156, Level 15, State 1, Line 15
+Incorrect syntax near the keyword 'INNER'.
+
+My code:
+
+DELETE FROM WorkRecord2 
+INNER JOIN Employee ON EmployeeRun=EmployeeNo
+WHERE Company = '1' AND Date = '2013-05-06'
+
+
+
+DELETE w
+FROM WorkRecord2 w
+INNER JOIN Employee e
+  ON EmployeeRun=EmployeeNo
+WHERE Company = '1' AND Date = '2013-05-06'
+
+Or try this -
+
+ DELETE WorkRecord2 
+      FROM WorkRecord2 
+INNER JOIN Employee 
+        ON EmployeeRun=EmployeeNo
+     WHERE Company = '1' 
+       AND Date = '2013-05-06';
+
+Or try this -
+      
+DELETE FROM dbo.WorkRecord2 
+WHERE EmployeeRun IN (
+    SELECT e.EmployeeNo
+    FROM dbo.Employee e
+    WHERE ...
+)
+
+Or try this -
+
+DELETE FROM dbo.WorkRecord2 
+WHERE EXISTS(
+    SELECT 1
+    FROM dbo.Employee e
+    WHERE EmployeeRun = e.EmployeeNo
+        AND ....
+)
