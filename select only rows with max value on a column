@@ -1,0 +1,75 @@
+https://stackoverflow.com/questions/7745609/sql-select-only-rows-with-max-value-on-a-column
+
++------+-------+--------------------------------------+
+| id   | rev   | content                              |
++------+-------+--------------------------------------+
+| 1    | 1     | ...                                  |
+| 2    | 1     | ...                                  |
+| 1    | 2     | ...                                  |
+| 1    | 3     | ...                                  |
++------+-------+--------------------------------------+
+
+
+How do I select one row per id and only the greatest rev?
+With the above data, the result should contain two rows: [1, 3, ...] and [2, 1, ..]. I'm using MySQL.
+
+Currently I use checks in the while loop to detect and over-write old revs from the resultset. 
+But is this the only method to achieve the result? Isn't there a SQL solution?
+
+Update
+As the answers suggest, there is a SQL solution, and here a sqlfiddle demo.
+
+Update 2
+I noticed after adding the above sqlfiddle, the rate at which the question is upvoted has surpassed the upvote rate of the answers.
+That has not been the intention! The fiddle is based on the answers, especially the accepted answer.
+
+All you need is a GROUP BY clause with the MAX aggregate function:
+
+SELECT id, MAX(rev)
+FROM YourTable
+GROUP BY id
+It's never that simple, is it?
+I just noticed you need the content column as well.
+
+This is a very common question in SQL: find the whole data for the row with some max value in a column per some group identifier. 
+I heard that a lot during my career. Actually, it was one the questions I answered in my current job's technical interview.
+
+It is, actually, so common that StackOverflow community has created a single tag just to deal with questions like that:
+greatest-n-per-group.
+
+Basically, you have two approaches to solve that problem:
+
+Joining with simple group-identifier, max-value-in-group Sub-query
+In this approach, you first find the group-identifier, max-value-in-group (already solved above) in a sub-query. 
+Then you join your table to the sub-query with equality on both group-identifier and max-value-in-group:
+
+SELECT a.id, a.rev, a.contents
+FROM YourTable a
+INNER JOIN (
+    SELECT id, MAX(rev) rev
+    FROM YourTable
+    GROUP BY id
+) b ON a.id = b.id AND a.rev = b.rev
+Left Joining with self, tweaking join conditions and filters
+In this approach, you left join the table with itself. Equality goes in the group-identifier. Then, 2 smart moves:
+
+The second join condition is having left side value less than right value
+When you do step 1, the row(s) that actually have the max value will have NULL in the right side (it's a LEFT JOIN, remember?).
+Then, we filter the joined result, showing only the rows where the right side is NULL.
+So you end up with:
+
+SELECT a.*
+FROM YourTable a
+LEFT OUTER JOIN YourTable b
+    ON a.id = b.id AND a.rev < b.rev
+WHERE b.id IS NULL;
+Conclusion
+Both approaches bring the exact same result.
+
+If you have two rows with max-value-in-group for group-identifier, both rows will be in the result in both approaches.
+
+Both approaches are SQL ANSI compatible, thus, will work with your favorite RDBMS, regardless of its "flavor".
+
+Both approaches are also performance friendly, however your mileage may vary (RDBMS, DB Structure, Indexes, etc.).
+So when you pick one approach over the other, benchmark.
+ And make sure you pick the one which make most of sense to you.
