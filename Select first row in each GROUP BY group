@@ -1,0 +1,122 @@
+As the title suggests, I'd like to select the first row of each set of rows grouped with a GROUP BY.
+
+Specifically, if I've got a purchases table that looks like this:
+
+SELECT * FROM purchases;
+My Output:
+
+id | customer | total
+---+----------+------
+ 1 | Joe      | 5
+ 2 | Sally    | 3
+ 3 | Joe      | 2
+ 4 | Sally    | 1
+I'd like to query for the id of the largest purchase (total) made by each customer. Something like this:
+
+SELECT FIRST(id), customer, FIRST(total)
+FROM  purchases
+GROUP BY customer
+ORDER BY total DESC;
+Expected Output:
+
+FIRST(id) | customer | FIRST(total)
+----------+----------+-------------
+        1 | Joe      | 5
+        2 | Sally    | 3
+        
+        
+        
+ WITH summary AS (
+    SELECT p.id, 
+           p.customer, 
+           p.total, 
+           ROW_NUMBER() OVER(PARTITION BY p.customer 
+                                 ORDER BY p.total DESC) AS rk
+      FROM PURCHASES p)
+SELECT s.*
+  FROM summary s
+ WHERE s.rk = 1
+ 
+ 
+ 
+ SELECT MIN(x.id),  -- change to MAX if you want the highest
+         x.customer, 
+         x.total
+    FROM PURCHASES x
+    JOIN (SELECT p.customer,
+                 MAX(total) AS max_total
+            FROM PURCHASES p
+        GROUP BY p.customer) y ON y.customer = x.customer
+                              AND y.max_total = x.total
+GROUP BY x.customer, x.total
+
+
+
+
+ PostgreSQL this is typically simpler and faster (more performance optimization below):
+
+SELECT DISTINCT ON (customer)
+       id, customer, total
+FROM   purchases
+ORDER  BY customer, total DESC, id;
+Or shorter (if not as clear) with ordinal numbers of output columns:
+
+SELECT DISTINCT ON (2)
+       id, customer, total
+FROM   purchases
+ORDER  BY 2, 3 DESC, 1;
+If total can be NULL (won't hurt either way, but you'll want to match existing indexes):
+
+...
+ORDER  BY customer, total DESC NULLS LAST, id;
+Major points
+DISTINCT ON is a PostgreSQL extension of the standard (where only DISTINCT on the whole SELECT list is defined).
+
+List any number of expressions in the DISTINCT ON clause, the combined row value defines duplicates. The manual:
+
+Obviously, two rows are considered distinct if they differ in at least one column value. Null values are considered equal in this comparison.
+
+Bold emphasis mine.
+
+DISTINCT ON can be combined with ORDER BY. Leading expressions have to match leading DISTINCT ON expressions in the same order. You can add additional expressions to ORDER BY to pick a particular row from each group of peers. I added id as last item to break ties:
+
+"Pick the row with the smallest id from each group sharing the highest total."
+
+To order results in a way that disagrees with the sort order determining the first per group, you can nest above query in an outer query with another ORDER BY. Like:
+
+PostgreSQL DISTINCT ON with different ORDER BY
+If total can be NULL, you most probably want the row with the greatest non-null value. Add NULLS LAST like demonstrated. Details:
+
+PostgreSQL sort by datetime asc, null first?
+The SELECT list is not constrained by expressions in DISTINCT ON or ORDER BY in any way. (Not needed in the simple case above):
+
+You don't have to include any of the expressions in DISTINCT ON or ORDER BY.
+
+You can include any other expression in the SELECT list. This is instrumental for replacing much more complex queries with subqueries and aggregate / window functions.
+
+I tested with Postgres versions 8.3 – 12. But the feature has been there at least since version 7.1, so basically always.
+
+Index
+The perfect index for the above query would be a multi-column index spanning all three columns in matching sequence and with matching sort order:
+
+CREATE INDEX purchases_3c_idx ON purchases (customer, total DESC, id);
+May be too specialized. But use it if read performance for the particular query is crucial. If you have DESC NULLS LAST in the query, use the same in the index so that sort order matches and the index is applicable.
+
+Effectiveness / Performance optimization
+Weigh cost and benefit before creating tailored indexes for each query. The potential of above index largely depends on data distribution.
+
+The index is used because it delivers pre-sorted data. In Postgres 9.2 or later the query can also benefit from an index only scan if the index is smaller than the underlying table. The index has to be scanned in its entirety, though.
+
+For few rows per customer (high cardinality in column customer), this is very efficient. Even more so if you need sorted output anyway. The benefit shrinks with a growing number of rows per customer.
+Ideally, you have enough work_mem to process the involved sort step in RAM and not spill to disk. But generally setting work_mem too high can have adverse effects. Consider SET LOCAL for exceptionally big queries. Find how much you need with EXPLAIN ANALYZE. Mention of "Disk:" in the sort step indicates the need for more:
+
+Configuration parameter work_mem in PostgreSQL on Linux
+Optimize simple query using ORDER BY date and text
+For many rows per customer (low cardinality in column customer), a loose index scan (a.k.a. "skip scan") would be (much) more efficient, but that's not implemented up to Postgres 12. (An implementation for index-only scans is in development for Postgres 13. See here and here.)
+For now, there are faster query techniques to substitute for this. In particular if you have a separate table holding unique customers, which is the typical use case. But also if you don't:
+
+Optimize GROUP BY query to retrieve latest row per user
+Optimize groupwise maximum query
+Query last N related rows per row
+Benchmark
+I had a simple benchmark here which is outdated by now. I replaced it with a detailed benchmark in this separate answer.
